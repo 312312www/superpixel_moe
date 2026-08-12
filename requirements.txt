@@ -1,0 +1,8 @@
+# Runtime dependencies for the minimal Superpixel-MoE baseline.
+# Install the hardware-appropriate PyTorch build first; see README.md.
+numpy>=2.0,<3
+Pillow>=10.0
+scikit-image>=0.25.2,<0.26
+torch>=2.5,<2.6
+torchvision>=0.20,<0.21
+mediapipe>=0.10.30,<0.11

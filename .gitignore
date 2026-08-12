@@ -1,0 +1,62 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local environment files
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime outputs, logs, caches, and experiment tracking
+outputs/
+runs/
+logs/
+wandb/
+tensorboard/
+*.log
+
+# Datasets and generated NumPy artifacts
+data/
+dataset/
+datasets/
+*.npy
+*.npz
+
+# Model checkpoints, pretrained weights, and downloaded task assets
+*.pt
+*.pth
+*.ckpt
+*.onnx
+models/*.task
+
+# Local installation packages and archives
+*.whl
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*~
