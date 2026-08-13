@@ -13,13 +13,14 @@ RGB 图像
   -> live/spoof 二分类
 ```
 
-当前版本用于验证单图推理、单批次前向/反向和短训练流程。它还不是最终实验版本，不包含复杂路由、Top-k、关键点编码、全量缓存、OCC-FAS 正式协议或最终 HTER/AUC 结果。
+当前版本已验证单图推理、单批次前向/反向和短训练流程，并接入 MediaPipe 人脸部位软编码与可选 SLIC 磁盘缓存。它仍不是最终实验版本，不包含复杂路由、Top-k、OCC-FAS 正式协议或最终 HTER/AUC 结果。
 
 ## 1. 项目结构
 
 ```text
 fas_moe/
   __init__.py       公共 Python API
+  checkpoint.py     checkpoint 键、形状和结构配置校验
   io.py             JPG/PNG/NPY 输入和数值范围恢复
   features.py       19 维手工区域特征
   segmentation.py   独立的 SLIC 128/64/16 视图
@@ -27,10 +28,11 @@ fas_moe/
   model.py          区域池化、位置编码、MoE 和分类头
 tests/
   test_moe_pipeline.py
+  test_checkpoint_data.py
 run_moe.py          单图前向和中间结果导出
 train_moe.py        NPY 数据集短训练入口
+cache_landmarks.py  预生成 Landmark 部位缓存
 requirements.txt
-CODE_WALKTHROUGH_MOE.md
 ```
 
 ## Landmark 人脸部位编码
@@ -42,10 +44,11 @@ unknown / left_eyebrow / right_eyebrow / left_eye / right_eye /
 nose / mouth / left_cheek / right_cheek / forehead / chin
 ```
 
-官方模型默认放在：
+官方模型默认放在（以下任一路径均可）：
 
 ```text
 models/face_landmarker.task
+# 或项目根目录的 face_landmarker.task
 ```
 
 ### 下载 Face Landmarker 模型
@@ -105,8 +108,9 @@ python cache_landmarks.py `
 python train_moe.py --dataset-root 'F:\00Dataset\FAS' --no-landmarks --no-pretrained
 ```
 
-Landmark 版模型新增 `part_embedding` 和 token LayerNorm，因此旧 checkpoint 只能用于
-初始化共有参数；正式实验需要重新训练 Landmark 版本。
+Landmark 版模型新增 `part_embedding` 和 token LayerNorm。`run_moe.py` 会在前向前严格
+校验 checkpoint 的参数键、形状和已保存的结构配置；只要这些内容与当前模型不一致，
+就会直接报错，正式实验需要使用相同配置重新训练。
 
 三层是同一输入图像的独立 SLIC 空间视图，最终分别修正为 128、64、16 个连通区域。三层之间不保证边界包含关系，也不生成父子映射。
 
@@ -114,21 +118,34 @@ Landmark 版模型新增 `part_embedding` 和 token LayerNorm，因此旧 checkp
 
 ### 2.1 基础要求
 
-- Python 3.10；
+- Python 3.10+（Windows 已验证 3.10.16；Linux/WSL 已验证 3.12.3）；
 - 推荐安装 Miniconda 或 Anaconda；
 - NVIDIA GPU 不是必需条件，但训练时建议使用；
 - 如果使用 NVIDIA GPU，驱动必须支持准备安装的 PyTorch CUDA 版本。
 
-已经验证过的参考组合是：
+当前工作区已验证的参考组合是：
 
 ```text
-Python       3.10.18
-NumPy        2.2.6
-Pillow       11.0.0
-scikit-image 0.25.2
-PyTorch      2.5.1
-torchvision  0.20.1
-CUDA build   12.1
+Windows / Conda
+  Python       3.10.16
+  NumPy        1.26.4
+  Pillow       11.3.0
+  scikit-image 0.25.2
+  PyTorch      2.8.0+cpu
+  torchvision  0.23.0+cpu
+  MediaPipe    0.10.21
+  CUDA         False
+
+Linux / WSL2 Ubuntu 24.04.2
+  Python       3.12.3
+  NumPy        1.26.4
+  Pillow       11.3.0
+  scikit-image 0.25.2
+  PyTorch      2.8.0+cpu
+  torchvision  0.23.0+cpu
+  MediaPipe    0.10.21
+  matplotlib   3.10.5
+  CUDA         False
 ```
 
 ### 2.2 创建独立 Conda 环境
@@ -145,16 +162,16 @@ python -m pip install --upgrade pip
 
 ### 2.3 安装 PyTorch
 
-NVIDIA GPU 且准备使用 CUDA 12.1：
+NVIDIA GPU 且准备使用某个 CUDA 版本：
 
 ```powershell
-python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+python -m pip install torch torchvision --index-url '<PYTORCH_INDEX_URL_FOR_YOUR_CUDA>'
 ```
 
 只使用 CPU：
 
 ```powershell
-python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
 其他 CUDA 版本应根据 [PyTorch 官方安装页面](https://pytorch.org/get-started/locally/) 选择匹配命令。不要把不匹配的 CUDA wheel 强行安装到环境中。
@@ -168,15 +185,15 @@ Set-Location '<PROJECT_ROOT>'
 python -m pip install -r requirements.txt
 ```
 
-`requirements.txt` 包含当前运行代码需要的 NumPy、Pillow、scikit-image、PyTorch 和 torchvision。当前版本不依赖 `timm` 或 `mediapipe`。
+`requirements.txt` 包含当前运行代码需要的 NumPy、Pillow、scikit-image、PyTorch、torchvision、MediaPipe 及其运行时依赖。Windows 上固定 MediaPipe 0.10.21，是因为 0.10.30 的 Tasks ctypes bridge 初始化会报 `function 'free' not found`。Linux/WSL2 使用相同的 Python 依赖版本和官方 CPU torch/torchvision wheel；当前工作区已完成 Linux 端到端验证。当前版本不依赖 `timm`。
 
 检查环境：
 
 ```powershell
-python -c "import numpy, PIL, skimage, torch, torchvision; print('dependencies: PASS'); print('torch', torch.__version__); print('cuda', torch.cuda.is_available())"
+python -c "import numpy, PIL, skimage, torch, torchvision, mediapipe; print('dependencies: PASS'); print('numpy', numpy.__version__); print('torch', torch.__version__); print('torchvision', torchvision.__version__); print('mediapipe', mediapipe.__version__); print('cuda', torch.cuda.is_available())"
 ```
 
-输出 `dependencies: PASS` 即表示导入成功。CPU 环境显示 `cuda False` 属于正常情况。
+输出 `dependencies: PASS` 即表示导入成功。CPU 环境显示 `cuda False` 属于正常情况。若使用官方 CPU wheel，请先安装匹配的 torch/torchvision，再安装 `requirements.txt`。
 
 ## 3. 解压位置和路径参数
 
@@ -190,6 +207,10 @@ python -c "import numpy, PIL, skimage, torch, torchvision; print('dependencies: 
 | `--output 'outputs\demo'` | 输出目录，建议保留为项目内相对路径 |
 | `--checkpoint '<CHECKPOINT_PATH>'` | 已训练的 `checkpoint.pt` |
 | `--weights-path '<RESNET50_PATH>'` | 离线 ResNet-50 权重文件 |
+| `--landmark-model '<TASK_PATH>'` | MediaPipe `face_landmarker.task` 路径 |
+| `--landmark-cache-dir 'outputs/landmark_cache'` | Landmark 缓存目录 |
+| `--slic-cache-dir 'outputs/slic_cache'` | SLIC/区域描述缓存目录；默认启用（Python API 传 `None` 可关闭） |
+| `--image-range <RANGE>` | NPY RGB 数值范围：`auto`、`0-1/255`、`0-1` 或 `0-255`（推理、训练和缓存脚本均支持） |
 
 示例目录只是占位符，运行前必须替换尖括号中的内容：
 
@@ -213,7 +234,7 @@ python train_moe.py --dataset-root 'D:\datasets\FAS' --dataset CASIA-FASD --max-
 
 ### 4.2 当前训练数据
 
-`train_moe.py` 当前首先支持 NPY 版本的 `domain-generalization` 数据。最小训练 smoke 需要以下文件：
+`train_moe.py` 当前首先支持 NPY 版本的 `domain-generalization` 数据。`--image-range` 支持 `auto`、`0-1/255`、`0-1`、`0-255`；数据集包含极暗图像时建议显式指定。最小训练 smoke 需要以下文件：
 
 ```text
 <DATASET_ROOT>/
@@ -225,7 +246,10 @@ python train_moe.py --dataset-root 'D:\datasets\FAS' --dataset CASIA-FASD --max-
 
 命令中的 `--dataset-root` 必须指向上面的 `<DATASET_ROOT>`，而不是直接指向 `CASIA-FASD` 文件夹。
 
-数据标签固定为 `live=1`、`spoof=0`。CASIA RGB 缓存位于 `[0,1/255]`，加载器会自动恢复到 `[0,255]`。数据集不放入代码 ZIP，由每位成员在本地单独准备。
+数据标签固定为 `live=1`、`spoof=0`。加载器支持 `[0,1/255]`、`[0,1]` 和 `[0,255]`
+三种 RGB 数值范围；默认 `--image-range auto` 按数据集整体极值推断。若数据集像素很暗、
+导致 `[0,1/255]` 与 `[0,1]` 无法仅凭极值区分，请显式传入 `--image-range 0-1/255` 或
+`--image-range 0-1`。数据集不放入代码 ZIP，由每位成员在本地单独准备。
 
 ## 5. ResNet-50 权重
 
@@ -256,7 +280,9 @@ python run_moe.py `
 python -m unittest discover -s tests -v
 ```
 
-测试覆盖 SLIC 数量与连通性、确定性、输入范围恢复、19 维区域特征、区域池化、专家平均公式、模型前向和反向。
+测试覆盖 SLIC 数量与连通性、确定性及缓存命中/损坏恢复、三种 NPY 范围恢复、宽整数
+范围、19 维区域特征、区域池化、专家平均公式、模型前向/反向、输入范围参数校验，以及 checkpoint 的严格
+键/形状/结构配置校验。
 
 ### 6.2 运行一个单图样本
 
@@ -264,7 +290,11 @@ python -m unittest discover -s tests -v
 python run_moe.py `
   --input '<IMAGE_OR_NPY_PATH>' `
   --index 0 `
-  --output 'outputs\first_demo'
+  --output 'outputs\first_demo' `
+  --no-pretrained `
+  --landmark-model 'face_landmarker.task' `
+  --image-range auto `
+  --device cpu
 ```
 
 成功标志：
@@ -282,6 +312,9 @@ python train_moe.py `
   --dataset CASIA-FASD `
   --batch-size 2 `
   --max-steps 1 `
+  --no-pretrained `
+  --landmark-model 'face_landmarker.task' `
+  --device cpu `
   --output-dir 'outputs\train_smoke'
 ```
 
@@ -293,6 +326,29 @@ Training smoke: PASS
 
 只有这三步全部通过后，才应开始修改模型或运行长实验。
 
+### 6.4 Linux/WSL 验证
+
+在 Linux 或 WSL 的 Python 3.10+ 环境中，先安装与平台匹配的 CPU/CUDA
+PyTorch 和 torchvision，再安装项目依赖。下面命令对应已验证的 Ubuntu 24.04.2 / Python 3.12.3 CPU 环境：
+
+```bash
+python3.12 -m pip install torch==2.8.0+cpu torchvision==0.23.0+cpu \
+  --index-url https://download.pytorch.org/whl/cpu
+python3.12 -m pip install -r requirements.txt
+python3.12 -m unittest discover -s tests -p 'test_*.py' -v
+python3.12 -m compileall -q fas_moe run_moe.py train_moe.py cache_landmarks.py tests
+python3.12 run_moe.py \
+  --input '<IMAGE_OR_NPY_PATH>' \
+  --output 'outputs/linux_smoke' \
+  --no-pretrained \
+  --landmark-model '<PROJECT_ROOT>/face_landmarker.task' \
+  --device cpu
+```
+
+验收应看到 `Forward: PASS` 和三层区域数 `128/64/16`；当前 Linux 验证还通过了 18 项
+单元测试和 `compileall`。MediaPipe 可能打印 EGL/llvmpipe 图形加速警告，这不影响 CPU
+结果。若使用其他 Python 版本或 CUDA wheel，请安装对应匹配的 PyTorch/torchvision 组合。
+
 ## 7. 推理与训练输出
 
 `run_moe.py` 输出：
@@ -303,6 +359,7 @@ labels_128.npy / labels_064.npy / labels_016.npy
 features_128.npy / features_064.npy / features_016.npy
 positions_128.npy / positions_064.npy / positions_016.npy
 edges_128.npy / edges_064.npy / edges_016.npy
+part_distribution_128.npy / part_distribution_064.npy / part_distribution_016.npy
 tokens_128.npy / tokens_064.npy / tokens_016.npy
 summary.json
 ```
@@ -311,10 +368,11 @@ summary.json
 - `features`：19 维 RGB、Lab、梯度、面积、中心和形状统计；
 - `positions`：区域中心、面积比例和包围盒尺度；
 - `edges`：无向区域邻接边 `[E,2]`；
+- `part_distribution`：每个区域的 11 类人脸部位软分布 `[K,11]`；
 - `tokens`：加入位置编码并经过四专家平均后的区域 token；
-- `summary.json`：输入信息、SLIC 参数、区域数、logits、概率、设备和耗时。
+- `summary.json`：输入信息、SLIC 参数、区域数、logits、概率、设备和耗时；另记录 `slic_cache_hit`、`landmark_cache_hit`、模型路径和 `checkpoint_validation` 报告。
 
-没有训练 checkpoint 时，`summary.json` 中的概率只用于检查数据流。
+没有训练 checkpoint 时，`summary.json` 中的概率只用于检查数据流。传入 `--checkpoint` 时会先严格校验所有参数键、形状及结构配置（区域层级、通道、位置维度、专家隐藏维度、专家数、类别数、Landmark 开关和输入范围）；不匹配会在前向前报错，不会继续生成 logits。
 
 `train_moe.py` 输出：
 
@@ -329,10 +387,13 @@ config.json
 ## 8. Python API 和模型接口
 
 ```python
+import torch
 from fas_moe import SuperpixelMoE, SuperpixelMoEConfig, segment_views
 
+# image is one HWC uint8 RGB NumPy array with shape [H,W,3].
 views = segment_views(image)
 model = SuperpixelMoE(SuperpixelMoEConfig())
+images = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).float()
 logits, details = model(images, views=views)
 ```
 
@@ -347,11 +408,13 @@ details['tokens_16']        [B, 16, 512]
 输出 logits                 [B, 2]
 ```
 
-批量调用时，`views` 应传入与 batch 等长的 `list[SuperpixelViews]`。输入图像应为 RGB `[0,255]` 或 `[0,1]` 张量。
+批量调用时，`views` 应传入与 batch 等长的 `list[SuperpixelViews]`；单个 `SuperpixelViews`
+也可复用于整个 batch。输入图像应为 RGB `[0,255]` 或 `[0,1]` 张量，模型会在内部统一
+转换到 `[0,255]` 后做 ImageNet 标准化。
 
 ## 9. 继续开发时的约束
 
-修改代码前先阅读 `CODE_WALKTHROUGH_MOE.md`。修改后必须满足：
+修改代码前先阅读本 README。修改后必须满足：
 
 - 三层默认区域数仍是 128、64、16；
 - backbone 对一个 batch 只运行一次；
@@ -373,9 +436,9 @@ fas_moe/
 tests/
 run_moe.py
 train_moe.py
+cache_landmarks.py
 requirements.txt
 README.md
-CODE_WALKTHROUGH_MOE.md
 .gitignore
 ```
 
@@ -403,13 +466,16 @@ __pycache__/
 5. 当前未解决的问题；
 6. 下一位成员建议先完成的任务。
 
-## 11. 当前边界和后续方向
+## 11. 已完成的本轮验收
 
-当前代码只证明最简路径可以运行，不代表已经获得有效的 FAS 指标。建议按以下顺序扩展：
+本轮已完成并验证：Windows/Conda Python 3.10.16 CPU 环境，以及 WSL2 Ubuntu 24.04.2 /
+Python 3.12.3 CPU 环境；两端均通过 18 项单元测试、compileall 和三尺度前向 smoke，
+并完成真实人脸的 MediaPipe 检测、默认根目录模型发现、SLIC/Landmark 缓存命中与损坏
+恢复、严格 checkpoint 校验。随机 backbone 或未训练分类头的概率不代表 FAS 指标。仍可继续扩展：
 
-1. 为 SLIC 标签增加磁盘缓存，避免每个 epoch 重复计算；
-2. 接入 `domain-generalization-multi` 的 profile/depth/IR；
-3. 接入 OCC-FAS 官方 train/dev/test 协议；
-4. 增加 MediaPipe 关键点位置编码并做消融；
-5. 比较等权专家、软路由和 Top-k 路由；
-6. 增加 HTER/AUC、跨域实验和可复现实验配置。
+1. 接入 `domain-generalization-multi` 的 profile/depth/IR；
+2. 接入 OCC-FAS 官方 train/dev/test 协议；
+3. 增加 MediaPipe 关键点位置编码并做消融；
+4. 比较等权专家、软路由和 Top-k 路由；
+5. 增加 HTER/AUC、跨域实验和可复现实验配置。
+
