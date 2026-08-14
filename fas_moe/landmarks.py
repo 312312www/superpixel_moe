@@ -11,6 +11,8 @@ import numpy as np
 
 
 LANDMARK_MODEL_ENV = "FAS_FACE_LANDMARKER_MODEL"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_MODEL_REQUESTS = {"models/face_landmarker.task", "face_landmarker.task"}
 
 
 @dataclass(frozen=True)
@@ -27,10 +29,37 @@ _LANDMARKERS: dict[tuple[str, float, float], Any] = {}
 
 
 def resolve_model_path(model_path: str | Path | None) -> Path | None:
-    """Resolve an explicit model path or ``FAS_FACE_LANDMARKER_MODEL``."""
+    """Resolve an explicit model path or ``FAS_FACE_LANDMARKER_MODEL``.
 
-    value = model_path or os.environ.get(LANDMARK_MODEL_ENV)
-    return Path(value).expanduser().resolve() if value else None
+    The command-line defaults historically point at ``models/face_landmarker.task``.
+    A number of hand-off bundles (including the current workspace) keep the
+    downloaded task beside the entry-point scripts instead.  Resolve the user
+    supplied path first, then recognize that conventional project-root location
+    when the requested path is the default and does not exist.  Arbitrary missing
+    paths are left untouched so callers still receive a useful fallback reason.
+    """
+
+    value = model_path if model_path is not None else os.environ.get(LANDMARK_MODEL_ENV)
+    if value is None or not str(value).strip():
+        return None
+
+    # Accept a documented Windows-style relative path on POSIX as well.  On
+    # Windows, forward slashes are understood by pathlib too.
+    requested = Path(str(value).strip().replace("\\", "/")).expanduser()
+    resolved = requested.resolve()
+    if resolved.is_file():
+        return resolved
+
+    # Resolve only the documented default names relative to the source tree.
+    # Arbitrary missing paths stay untouched, preserving useful diagnostics.
+    if not requested.is_absolute() and requested.as_posix() in _DEFAULT_MODEL_REQUESTS:
+        for candidate in (
+            _PROJECT_ROOT / requested,
+            _PROJECT_ROOT / "face_landmarker.task",
+        ):
+            if candidate.is_file():
+                return candidate.resolve()
+    return resolved
 
 
 def model_identity(model_path: str | Path | None) -> str:

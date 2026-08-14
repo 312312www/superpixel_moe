@@ -1,8 +1,13 @@
 # Runtime dependencies for the minimal Superpixel-MoE baseline.
 # Install the hardware-appropriate PyTorch build first; see README.md.
-numpy>=2.0,<3
+numpy>=1.26,<2
 Pillow>=10.0
 scikit-image>=0.25.2,<0.26
-torch>=2.5,<2.6
-torchvision>=0.20,<0.21
-mediapipe>=0.10.30,<0.11
+torch>=2.5,<2.9
+torchvision>=0.20,<0.24
+# MediaPipe 0.10.30's Windows wheel currently lacks the exported `free`
+# symbol expected by its Tasks ctypes bridge; 0.10.21 is verified on
+# Python 3.10/Windows and still supports the Face Landmarker task API.
+mediapipe==0.10.21
+matplotlib>=3.7
+protobuf>=4.25.3,<5

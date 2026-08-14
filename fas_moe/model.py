@@ -27,10 +27,14 @@ class SuperpixelMoEConfig:
     use_landmarks: bool = True
     landmark_model_path: str | None = "models/face_landmarker.task"
     landmark_cache_dir: str | None = "outputs/landmark_cache"
+    slic_cache_dir: str | None = "outputs/slic_cache"
+    image_range: str = "auto"
 
     def __post_init__(self) -> None:
         if self.levels != (128, 64, 16):
             raise ValueError("the baseline levels are fixed at (128, 64, 16)")
+        if self.image_range not in ("auto", "0-1/255", "0-1", "0-255"):
+            raise ValueError("image_range must be one of auto, 0-1/255, 0-1, 0-255")
         if self.num_experts < 1 or self.expert_hidden_dim < 1:
             raise ValueError("num_experts and expert_hidden_dim must be positive")
 
@@ -136,14 +140,43 @@ class SuperpixelMoE(nn.Module):
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         if images.ndim != 4 or images.shape[1] != 3:
             raise ValueError(f"expected BCHW RGB input, got {tuple(images.shape)}")
+        input_dtype = images.dtype
+        input_was_integer = not torch.is_floating_point(images)
         images = images.float()
-        if float(images.detach().amax()) <= 1.5:
+        if self.config.image_range == "0-1/255":
+            images = images * (255.0 * 255.0)
+        elif self.config.image_range == "0-1":
             images = images * 255.0
+        elif self.config.image_range == "auto" and input_was_integer:
+            maximum = float(images.detach().amax())
+            if maximum > 255.0:
+                try:
+                    dtype_maximum = float(torch.iinfo(input_dtype).max)
+                except TypeError:
+                    dtype_maximum = maximum
+                images = images * (255.0 / dtype_maximum)
+        elif self.config.image_range == "auto":
+            # Infer independently per sample so a mixed batch of [0,1] and
+            # legacy [0,1/255] arrays is handled consistently.  A genuinely
+            # dark canonical [0,255] float image remains inherently ambiguous;
+            # callers can select ``image_range='0-255'`` for that case.
+            maxima = images.detach().amax(dim=(1, 2, 3), keepdim=True)
+            scale = torch.ones_like(maxima)
+            scale = torch.where(maxima <= (1.0 / 255.0) + 1e-6, 255.0 * 255.0, scale)
+            scale = torch.where(
+                (maxima > (1.0 / 255.0) + 1e-6) & (maxima <= 1.5),
+                torch.full_like(maxima, 255.0),
+                scale,
+            )
+            images = images * scale
         if views is None:
             segmentation_config = SuperpixelConfig(
                 use_landmarks=self.config.use_landmarks,
                 landmark_model_path=self.config.landmark_model_path,
                 landmark_cache_dir=self.config.landmark_cache_dir,
+                slic_cache_dir=self.config.slic_cache_dir,
+                # The conversion above has produced canonical [0,255] values.
+                image_range="0-255",
             )
             views = [
                 segment_views(image.detach().cpu().permute(1, 2, 0).numpy(), segmentation_config)

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tempfile
+import os
+import shutil
 import unittest
 
 import numpy as np
@@ -65,17 +66,64 @@ class SuperpixelMoETests(unittest.TestCase):
             np.testing.assert_array_equal(self.views.labels[level], repeated.labels[level])
             np.testing.assert_allclose(self.views.features[level], repeated.features[level])
 
+    def test_slic_cache_round_trip_and_corruption_recovery(self) -> None:
+        cache_dir = Path("outputs") / f"_unit_slic_cache_{os.getpid()}"
+        shutil.rmtree(cache_dir, ignore_errors=True)
+        try:
+            config = SuperpixelConfig(
+                use_landmarks=False,
+                image_size=(64, 64),
+                slic_cache_dir=cache_dir,
+            )
+            first = segment_views(self.image, config)
+            self.assertFalse(first.metadata["slic_cache_hit"])
+            cache_path = Path(str(first.metadata["slic_cache_path"]))
+            self.assertTrue(cache_path.is_file())
+            self.assertEqual(cache_path.parent, cache_dir.resolve())
+            second = segment_views(self.image, config)
+            self.assertTrue(second.metadata["slic_cache_hit"])
+            for level in config.levels:
+                np.testing.assert_array_equal(first.labels[level], second.labels[level])
+                np.testing.assert_allclose(first.features[level], second.features[level])
+                np.testing.assert_array_equal(first.edges[level], second.edges[level])
+                np.testing.assert_allclose(first.positions[level], second.positions[level])
+
+            # A truncated/invalid entry is a miss and is atomically repaired.
+            cache_path.write_bytes(b"not a valid npz")
+            repaired = segment_views(self.image, config)
+            self.assertFalse(repaired.metadata["slic_cache_hit"])
+            self.assertTrue(cache_path.is_file())
+            with np.load(cache_path, allow_pickle=False) as archive:
+                self.assertTrue(archive.files)
+            self.assertEqual(list(cache_path.parent.glob("*.tmp.npz")), [])
+            restored = segment_views(self.image, config)
+            self.assertTrue(restored.metadata["slic_cache_hit"])
+        finally:
+            shutil.rmtree(cache_dir, ignore_errors=True)
+
+    def test_slic_cache_can_be_disabled(self) -> None:
+        config = SuperpixelConfig(use_landmarks=False, slic_cache_dir=None)
+        views = segment_views(self.image, config)
+        self.assertFalse(views.metadata["slic_cache_enabled"])
+        self.assertFalse(views.metadata["slic_cache_hit"])
+        self.assertIsNone(views.metadata["slic_cache_path"])
+
     def test_input_loading_and_range_restoration(self) -> None:
         damaged = self.image.astype(np.float32) / (255.0 * 255.0)
         prepared, metadata = prepare_image(damaged, (64, 64))
         self.assertEqual(metadata["normalization"], "float_[0,1/255]_restored_by_255_squared")
         np.testing.assert_allclose(prepared, self.image, atol=1)
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "batch.npy"
+        fixture_dir = Path("outputs") / f"_unit_input_fixture_{os.getpid()}"
+        shutil.rmtree(fixture_dir, ignore_errors=True)
+        fixture_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            path = fixture_dir / "batch.npy"
             np.save(path, np.stack([damaged, damaged]))
             loaded, input_metadata = load_input(path, index=1)
             self.assertEqual(input_metadata["input_kind"], "npy")
             np.testing.assert_array_equal(loaded, damaged)
+        finally:
+            shutil.rmtree(fixture_dir, ignore_errors=True)
 
     def test_region_pooling_shape(self) -> None:
         feature_map = torch.arange(512 * 32 * 32, dtype=torch.float32).reshape(512, 32, 32)

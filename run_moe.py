@@ -10,7 +10,14 @@ import time
 import numpy as np
 import torch
 
-from fas_moe import SuperpixelConfig, SuperpixelMoE, SuperpixelMoEConfig, load_input, segment_views
+from fas_moe import (
+    SuperpixelConfig,
+    SuperpixelMoE,
+    SuperpixelMoEConfig,
+    load_checkpoint,
+    load_input,
+    segment_views,
+)
 
 
 def _device(value: str) -> torch.device:
@@ -37,6 +44,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="MediaPipe face_landmarker.task",
     )
     parser.add_argument("--landmark-cache-dir", type=Path, default=Path("outputs/landmark_cache"))
+    parser.add_argument("--slic-cache-dir", type=Path, default=Path("outputs/slic_cache"))
+    parser.add_argument(
+        "--image-range",
+        choices=("auto", "0-1/255", "0-1", "0-255"),
+        default="auto",
+        help="numeric range of an NPY RGB input; use 0-255 for dark canonical float data",
+    )
     parser.add_argument("--device", default="auto")
     return parser
 
@@ -50,6 +64,8 @@ def main() -> int:
             use_landmarks=args.landmarks,
             landmark_model_path=args.landmark_model,
             landmark_cache_dir=args.landmark_cache_dir,
+            slic_cache_dir=args.slic_cache_dir,
+            image_range=args.image_range,
         ),
     )
     device = _device(args.device)
@@ -60,17 +76,19 @@ def main() -> int:
             use_landmarks=args.landmarks,
             landmark_model_path=str(args.landmark_model) if args.landmark_model else None,
             landmark_cache_dir=str(args.landmark_cache_dir) if args.landmark_cache_dir else None,
+            slic_cache_dir=str(args.slic_cache_dir) if args.slic_cache_dir else None,
+            # ``views.image`` has already been normalized by segment_views to
+            # canonical uint8 [0,255]; do not apply the source-range scale a
+            # second time in the model.
+            image_range="0-255",
         )
     ).to(device)
+    checkpoint_report: dict[str, object] | None = None
     if args.checkpoint is not None:
-        checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
-        state = checkpoint.get("model_state", checkpoint)
-        incompatible = model.load_state_dict(state, strict=False)
-        if incompatible.missing_keys or incompatible.unexpected_keys:
-            print(
-                "Checkpoint architecture differs from the landmark model; "
-                f"missing={incompatible.missing_keys}, unexpected={incompatible.unexpected_keys}"
-            )
+        # Preflight validates every key/shape and structural config field, then
+        # performs an exact strict load.  Incompatible checkpoints stop before
+        # any logits are produced.
+        checkpoint_report = load_checkpoint(model, args.checkpoint, map_location=device)
     model.eval()
     started = time.perf_counter()
     with torch.no_grad():
@@ -97,6 +115,7 @@ def main() -> int:
         **input_metadata,
         "device": str(device),
         "checkpoint": str(args.checkpoint.resolve()) if args.checkpoint else None,
+        "checkpoint_validation": checkpoint_report,
         "pretrained_backbone": bool(args.pretrained),
         "landmarks_enabled": bool(args.landmarks),
         "levels": {str(level): int(np.unique(views.labels[level]).size) for level in views.labels},

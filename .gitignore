@@ -1,62 +1,124 @@
-# Python cache and build artifacts
+# ============================================================
+# Python / packaging
+# ============================================================
 __pycache__/
 *.py[cod]
 *$py.class
-build/
-dist/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
 
-# Virtual environments and local environment files
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+MANIFEST
+
+# Test, lint, type-check and coverage caches
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage.json
+
+# ============================================================
+# Virtual environments and local configuration
+# ============================================================
 .venv/
 venv/
 env/
+ENV/
 .env
 .env.*
+!.env.example
+*.local
 
-# IDE and operating-system files
+# ============================================================
+# IDE / OS files
+# ============================================================
 .vscode/
 .idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Runtime outputs, logs, caches, and experiment tracking
+# ============================================================
+# Runtime output, caches and experiment artifacts
+# ============================================================
 outputs/
 runs/
 logs/
 wandb/
+mlruns/
 tensorboard/
+checkpoints/
+artifacts/
 *.log
+*.prof
 
-# Datasets and generated NumPy artifacts
+# ============================================================
+# Local datasets and generated numerical arrays
+# ============================================================
 data/
 dataset/
 datasets/
 *.npy
 *.npz
 
-# Model checkpoints, pretrained weights, and downloaded task assets
+# ============================================================
+# Model weights / downloaded binary assets
+# Keep large or externally licensed assets out of the source repository.
+# ============================================================
+models/
+*.task
 *.pt
 *.pth
 *.ckpt
 *.onnx
-models/*.task
+*.safetensors
 
-# Local installation packages and archives
+# ============================================================
+# Archives and local packages
+# ============================================================
 *.whl
 *.zip
 *.7z
+*.rar
 *.tar
 *.tar.gz
+*.tgz
 
+# ============================================================
 # Temporary files
+# ============================================================
 tmp/
 temp/
+.tmp/
+.tmp_*/
+tmp_*/
+temp_*/
 *.tmp
+*.temp
 *.bak
 *~
+
+# Jupyter
+.ipynb_checkpoints/
