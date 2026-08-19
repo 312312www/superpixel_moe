@@ -14,13 +14,17 @@ from torch import nn
 # forward pass.  Other saved options (for example ``freeze_backbone``) are
 # runtime choices and do not make an otherwise complete state dict invalid.
 STRUCTURAL_CONFIG_FIELDS = (
+    "experiment",
+    "use_superpixel",
+    "use_landmarks",
+    "moe_mode",
     "levels",
     "feature_channels",
     "position_dim",
     "expert_hidden_dim",
     "num_experts",
     "num_classes",
-    "use_landmarks",
+    "freeze_batch_norm",
     "image_range",
 )
 
@@ -52,6 +56,7 @@ def validate_checkpoint(
     payload: Any,
     *,
     source: str | Path | None = None,
+    expected_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate a checkpoint against ``model`` and return a load report.
 
@@ -74,19 +79,33 @@ def validate_checkpoint(
 
     checkpoint_config = payload.get("model_config") if isinstance(payload, Mapping) else None
     config_mismatches: list[str] = []
+    metadata_mismatches: list[str] = []
     model_config = getattr(model, "config", None)
     if checkpoint_config is not None and not isinstance(checkpoint_config, Mapping):
         raise ValueError("checkpoint model_config must be a mapping when present")
     if isinstance(checkpoint_config, Mapping) and model_config is not None:
         for field in STRUCTURAL_CONFIG_FIELDS:
-            if field not in checkpoint_config or not hasattr(model_config, field):
+            if not hasattr(model_config, field):
+                continue
+            if field not in checkpoint_config:
+                config_mismatches.append(f"{field}: missing from checkpoint")
                 continue
             saved = _normalise_config_value(checkpoint_config[field])
             current = _normalise_config_value(getattr(model_config, field))
             if saved != current:
                 config_mismatches.append(f"{field}: checkpoint={saved!r}, model={current!r}")
+    if expected_metadata is not None:
+        if not isinstance(payload, Mapping):
+            metadata_mismatches.append("checkpoint payload is not a mapping")
+        else:
+            for field, expected in expected_metadata.items():
+                actual = payload.get(field, "<missing>")
+                if _normalise_config_value(actual) != _normalise_config_value(expected):
+                    metadata_mismatches.append(
+                        f"{field}: checkpoint={actual!r}, expected={expected!r}"
+                    )
 
-    if missing or unexpected or shape_mismatches or config_mismatches:
+    if missing or unexpected or shape_mismatches or config_mismatches or metadata_mismatches:
         origin = f" from {Path(source)}" if source is not None else ""
         details = []
         if missing:
@@ -97,6 +116,8 @@ def validate_checkpoint(
             details.append(f"shape mismatches ({len(shape_mismatches)}): {shape_mismatches[:8]}")
         if config_mismatches:
             details.append(f"model_config mismatches ({len(config_mismatches)}): {config_mismatches[:8]}")
+        if metadata_mismatches:
+            details.append(f"metadata mismatches ({len(metadata_mismatches)}): {metadata_mismatches[:8]}")
         raise ValueError("incompatible Superpixel-MoE checkpoint" + origin + ": " + "; ".join(details))
 
     # The strict load is intentional: the preflight above makes the error
@@ -106,6 +127,7 @@ def validate_checkpoint(
         "source": str(Path(source).resolve()) if source is not None else None,
         "state_keys": len(state),
         "model_config_present": isinstance(checkpoint_config, Mapping),
+        "metadata_validated": sorted(expected_metadata) if expected_metadata is not None else [],
         "validated_strict": True,
     }
 
@@ -115,6 +137,7 @@ def load_checkpoint(
     path: str | Path,
     *,
     map_location: torch.device | str = "cpu",
+    expected_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Load and strictly validate a serialized checkpoint into ``model``."""
 
@@ -122,7 +145,9 @@ def load_checkpoint(
     if not checkpoint_path.is_file():
         raise FileNotFoundError(f"checkpoint does not exist: {checkpoint_path}")
     payload = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
-    return validate_checkpoint(model, payload, source=checkpoint_path)
+    return validate_checkpoint(
+        model, payload, source=checkpoint_path, expected_metadata=expected_metadata
+    )
 
 
 __all__ = ["STRUCTURAL_CONFIG_FIELDS", "checkpoint_state", "load_checkpoint", "validate_checkpoint"]

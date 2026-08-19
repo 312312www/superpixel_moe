@@ -146,9 +146,36 @@ class CheckpointAndDataTests(unittest.TestCase):
 
             shutil.rmtree(temp, ignore_errors=True)
 
+    def test_dataset_limit_keeps_both_classes(self) -> None:
+        temp = Path("outputs") / "balanced_limit_fixture"
+        if temp.exists():
+            import shutil
+
+            shutil.rmtree(temp, ignore_errors=True)
+        try:
+            folder = temp / "domain-generalization" / "CASIA-FASD"
+            folder.mkdir(parents=True)
+            image = np.zeros((2, 2, 3), dtype=np.uint8)
+            np.save(folder / "casia_images_live.npy", np.repeat(image[None], 6, axis=0))
+            np.save(folder / "casia_images_spoof.npy", np.repeat(image[None], 10, axis=0))
+            dataset = NpyBinaryFASDataset(temp, "CASIA-FASD", limit_samples=6, image_range="0-255")
+            self.assertEqual(dataset.live_count, 3)
+            self.assertEqual(dataset.spoof_count, 3)
+            self.assertEqual(len(dataset), 6)
+            labels = [int(dataset[index]["label"]) for index in range(len(dataset))]
+            self.assertEqual(labels.count(1), 3)
+            self.assertEqual(labels.count(0), 3)
+        finally:
+            import shutil
+
+            shutil.rmtree(temp, ignore_errors=True)
+
     def test_checkpoint_validation_is_strict_and_checks_config(self) -> None:
         model = nn.Linear(3, 2)
         model.config = SimpleNamespace(
+            experiment="E",
+            use_superpixel=True,
+            moe_mode="multiple",
             levels=(128, 64, 16),
             feature_channels=512,
             position_dim=5,
@@ -157,12 +184,16 @@ class CheckpointAndDataTests(unittest.TestCase):
             num_classes=2,
             pretrained_backbone=False,
             freeze_backbone=True,
+            freeze_batch_norm=True,
             use_landmarks=True,
             image_range="auto",
         )
         payload = {
             "model_state": model.state_dict(),
             "model_config": {
+                "experiment": "E",
+                "use_superpixel": True,
+                "moe_mode": "multiple",
                 "levels": [128, 64, 16],
                 "feature_channels": 512,
                 "position_dim": 5,
@@ -171,12 +202,20 @@ class CheckpointAndDataTests(unittest.TestCase):
                 "num_classes": 2,
                 "pretrained_backbone": False,
                 "freeze_backbone": True,
+                "freeze_batch_norm": True,
                 "use_landmarks": True,
                 "image_range": "auto",
             },
         }
         report = validate_checkpoint(model, payload)
         self.assertTrue(report["validated_strict"])
+        payload["protocol"] = "OCI_M"
+        metadata_report = validate_checkpoint(
+            model, payload, expected_metadata={"protocol": "OCI_M"}
+        )
+        self.assertEqual(metadata_report["metadata_validated"], ["protocol"])
+        with self.assertRaisesRegex(ValueError, "metadata mismatches"):
+            validate_checkpoint(model, payload, expected_metadata={"protocol": "ICM_O"})
         broken = dict(payload)
         broken["model_config"] = dict(payload["model_config"], use_landmarks=False)
         with self.assertRaisesRegex(ValueError, "model_config mismatches"):

@@ -173,7 +173,9 @@ class SuperpixelMoETests(unittest.TestCase):
 
     def test_model_forward_and_backward(self) -> None:
         torch.manual_seed(7)
-        model = SuperpixelMoE(SuperpixelMoEConfig(pretrained_backbone=False))
+        model = SuperpixelMoE(
+            SuperpixelMoEConfig(experiment="E", pretrained_backbone=False)
+        )
         images = torch.from_numpy(self.image).permute(2, 0, 1).unsqueeze(0).float()
         logits, details = model(images, views=self.views)
         self.assertEqual(tuple(logits.shape), (1, 2))
@@ -184,9 +186,10 @@ class SuperpixelMoETests(unittest.TestCase):
         loss = torch.nn.CrossEntropyLoss()(logits, torch.tensor([1]))
         loss.backward()
         self.assertTrue(any(parameter.grad is not None for parameter in model.classifier.parameters()))
+        assert model.part_embedding is not None
         self.assertIsNotNone(model.part_embedding.weight.grad)
         self.assertTrue(torch.isfinite(model.part_embedding.weight.grad).all())
-        self.assertFalse(any(parameter.grad is not None for parameter in model.backbone.parameters()))
+        self.assertTrue(any(parameter.grad is not None for parameter in model.backbone.parameters()))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,465 @@
+{
+  "cross_identity_groups": 0,
+  "cross_label_groups": 0,
+  "cross_split_groups": 0,
+  "duplicate_groups": 13,
+  "duplicates": [
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_live.npy",
+          "base_split": "train",
+          "class": "live",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 1,
+          "protocol": "OCI_M",
+          "sample_id": "O:live:642",
+          "sample_index": 642,
+          "split": "train",
+          "subject_id": 47
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_live.npy",
+          "base_split": "train",
+          "class": "live",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 1,
+          "protocol": "OCI_M",
+          "sample_id": "O:live:882",
+          "sample_index": 882,
+          "split": "train",
+          "subject_id": 47
+        }
+      ],
+      "sha256": "d728a67625ef510d9f23cb5bf2884018105d5bb92de0b5d5e8a7bc91c9065d6f"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:104",
+          "sample_index": 104,
+          "split": "val",
+          "subject_id": 6
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:105",
+          "sample_index": 105,
+          "split": "val",
+          "subject_id": 6
+        }
+      ],
+      "sha256": "620aa14989fe446bcae065e30c13a5b0cfba69ddcdf4f97692f087215c324b03"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:344",
+          "sample_index": 344,
+          "split": "val",
+          "subject_id": 6
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:345",
+          "sample_index": 345,
+          "split": "val",
+          "subject_id": 6
+        }
+      ],
+      "sha256": "5e33872f71ff9576ac3247bc16e1b1233d0615b0b69a1caca105b119457e204a"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:824",
+          "sample_index": 824,
+          "split": "val",
+          "subject_id": 6
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:825",
+          "sample_index": 825,
+          "split": "val",
+          "subject_id": 6
+        }
+      ],
+      "sha256": "c71798b1f368c5cd48c484826e5e9e36b09d1ccdec604753b79cd8db9060be30"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:1064",
+          "sample_index": 1064,
+          "split": "val",
+          "subject_id": 6
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:1065",
+          "sample_index": 1065,
+          "split": "val",
+          "subject_id": 6
+        }
+      ],
+      "sha256": "75027ca7ab8578db2cb11d30a50e4dc7a15a829b2140732090271df5099b9d23"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:1304",
+          "sample_index": 1304,
+          "split": "val",
+          "subject_id": 6
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:1305",
+          "sample_index": 1305,
+          "split": "val",
+          "subject_id": 6
+        }
+      ],
+      "sha256": "1cdf25f1cca5734631aa2bdd3ee483e7a39441ae72da2e596cd7185789f491b3"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2466",
+          "sample_index": 2466,
+          "split": "val",
+          "subject_id": 21
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "val",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2467",
+          "sample_index": 2467,
+          "split": "val",
+          "subject_id": 21
+        }
+      ],
+      "sha256": "d6039ccd46129759c7fb50baad76c2528f2ae8ebd7721b88e9ab8d6bcce46461"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2708",
+          "sample_index": 2708,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2709",
+          "sample_index": 2709,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "1ab0856f0b868d8e85673ada968435ca67fd99f31c15900b511a5227847b6abf"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2948",
+          "sample_index": 2948,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:2949",
+          "sample_index": 2949,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "fa79e4018f546c49c7de1f221420a8b327fb4d24c46ef357311343624f9a5b7b"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3188",
+          "sample_index": 3188,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3189",
+          "sample_index": 3189,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "99d1fc3694569f72c87c715826d8801fc4267becabacd55085999dac2fe233a1"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3428",
+          "sample_index": 3428,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3429",
+          "sample_index": 3429,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "a7826437aeb95cc7fbd509e8057c36c2b36400b3e29ce7281ed37e4c87032194"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3668",
+          "sample_index": 3668,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3669",
+          "sample_index": 3669,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "e16623e320a95e672519e04fb48d454a0b61b14ab10a74e8e020f872c91e1203"
+    },
+    {
+      "count": 2,
+      "cross_identity": false,
+      "cross_label": false,
+      "cross_split": false,
+      "members": [
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3908",
+          "sample_index": 3908,
+          "split": "train",
+          "subject_id": 42
+        },
+        {
+          "array_file": "domain-generalization/OULU-NPU/Oulu_images_spoof.npy",
+          "base_split": "train",
+          "class": "spoof",
+          "dataset": "OULU-NPU",
+          "domain": "O",
+          "label": 0,
+          "protocol": "OCI_M",
+          "sample_id": "O:spoof:3909",
+          "sample_index": 3909,
+          "split": "train",
+          "subject_id": 42
+        }
+      ],
+      "sha256": "916218115741216e879e1fb7dd8ed79602c062171a42e3a6e6a9b26eaee95a10"
+    }
+  ],
+  "schema": 1,
+  "unique_samples": 6670
+}

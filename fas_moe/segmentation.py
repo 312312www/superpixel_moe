@@ -50,6 +50,8 @@ class SuperpixelConfig:
     # separate from the landmark cache so either cache can be invalidated
     # independently.  Relative paths are resolved against the project root.
     slic_cache_dir: str | Path | None = Path("outputs/slic_cache")
+    require_slic_cache: bool = False
+    require_landmark_cache: bool = False
     # ``auto`` is convenient for ordinary images, while callers that already
     # restored a float array to canonical ``[0,255]`` should pass ``0-255``.
     # This removes the unavoidable ambiguity of a very dark float image.
@@ -70,6 +72,12 @@ class SuperpixelConfig:
             raise ValueError("compactness, sigma and max_num_iter must be valid")
         if self.max_slic_attempts < 1:
             raise ValueError("max_slic_attempts must be positive")
+        if self.require_slic_cache and self.slic_cache_dir is None:
+            raise ValueError("require_slic_cache needs a configured slic_cache_dir")
+        if self.require_landmark_cache and not self.use_landmarks:
+            raise ValueError("require_landmark_cache needs use_landmarks=True")
+        if self.require_landmark_cache and self.landmark_cache_dir is None:
+            raise ValueError("require_landmark_cache needs a configured landmark_cache_dir")
         if not 0.0 <= self.landmark_detection_confidence <= 1.0:
             raise ValueError("landmark_detection_confidence must be in [0,1]")
         if not 0.0 <= self.landmark_presence_confidence <= 1.0:
@@ -576,6 +584,9 @@ def _part_distributions(
             "landmark_cache_hit": True,
             "landmark_cache_path": str(cache_path.resolve()),
         }
+    if config.require_landmark_cache:
+        location = str(cache_path.resolve()) if cache_path is not None else "<not configured>"
+        raise RuntimeError(f"required Landmark cache miss: {location}")
     result = detect_face_landmarks(
         image,
         config.landmark_model_path,
@@ -621,6 +632,9 @@ def segment_views(
     if cached is not None:
         labels, features, edges, positions, requested_segments = cached
     else:
+        if config.require_slic_cache:
+            location = str(slic_cache_path.resolve()) if slic_cache_path is not None else "<not configured>"
+            raise RuntimeError(f"required SLIC cache miss: {location}")
         for level in config.levels:
             level_labels, requested = _segment_level(prepared, level, config)
             labels[level] = level_labels

@@ -1,4 +1,4 @@
-# FAS Superpixel-MoE 最简可运行基线
+# FAS Superpixel-MoE 与 A--E 消融实验
 
 本项目实现一条可以继续扩展的 FAS（Face Anti-Spoofing）基线：
 
@@ -13,24 +13,28 @@ RGB 图像
   -> live/spoof 二分类
 ```
 
-当前版本已验证单图推理、单批次前向/反向和短训练流程，并接入 MediaPipe 人脸部位软编码与可选 SLIC 磁盘缓存。它仍不是最终实验版本，不包含复杂路由、Top-k、OCC-FAS 正式协议或最终 HTER/AUC 结果。
+当前版本支持 A--E 五种消融结构、四组本地 subject-disjoint LODO Manifest、源域验证指标、固定阈值、best/last checkpoint、确定性域类别平衡批次和严格缓存模式。卷积参数参与训练时，ResNet BatchNorm 固定为 eval 并冻结统计量和 affine 参数。正式命令和冻结前检查见 [ABLATION_EXPERIMENT_GUIDE_CN.md](ABLATION_EXPERIMENT_GUIDE_CN.md)。它仍不包含复杂路由、Top-k、OCC-FAS 官方协议或已经完成的 60 次正式实验结果。
 
 ## 1. 项目结构
 
 ```text
 fas_moe/
   __init__.py       公共 Python API
-  checkpoint.py     checkpoint 键、形状和结构配置校验
+  checkpoint.py     checkpoint 结构和协议元数据校验
+  datasets.py       Subject Manifest、多源域读取和固定批次
+  metrics.py        FAS 指标与源域阈值
   io.py             JPG/PNG/NPY 输入和数值范围恢复
   features.py       19 维手工区域特征
   segmentation.py   独立的 SLIC 128/64/16 视图
   backbone.py       共享 ResNet-50 空间特征图
   model.py          区域池化、位置编码、MoE 和分类头
 tests/
+  test_ablation.py
   test_moe_pipeline.py
   test_checkpoint_data.py
 run_moe.py          单图前向和中间结果导出
-train_moe.py        NPY 数据集短训练入口
+train_moe.py        单数据集 smoke 与正式 LODO 训练入口
+prepare_ablation.py 生成 Manifest 和重复图像审计
 cache_landmarks.py  预生成 Landmark 部位缓存
 requirements.txt
 ```
@@ -468,14 +472,15 @@ __pycache__/
 
 ## 11. 已完成的本轮验收
 
-本轮已完成并验证：Windows/Conda Python 3.10.16 CPU 环境，以及 WSL2 Ubuntu 24.04.2 /
-Python 3.12.3 CPU 环境；两端均通过 18 项单元测试、compileall 和三尺度前向 smoke，
-并完成真实人脸的 MediaPipe 检测、默认根目录模型发现、SLIC/Landmark 缓存命中与损坏
-恢复、严格 checkpoint 校验。随机 backbone 或未训练分类头的概率不代表 FAS 指标。仍可继续扩展：
+本轮在 Windows/Conda CUDA 环境通过 27 项单元测试和 compileall；A--E 均完成真实 CASIA
+单步前向、反向和 checkpoint 保存，OCI→M 的 A 模式完成源域验证、阈值选择、best/last
+checkpoint 与严格回载。实际 6670 个 RGB 样本的重复审计发现 13 组同身份、同标签、同
+split 重复，没有跨身份、跨标签或跨 split 泄漏。随机 backbone 或未充分训练模型的概率
+不代表最终 FAS 指标。仍可继续扩展：
 
 1. 接入 `domain-generalization-multi` 的 profile/depth/IR；
 2. 接入 OCC-FAS 官方 train/dev/test 协议；
-3. 增加 MediaPipe 关键点位置编码并做消融；
+3. 运行源域收敛预实验并锁定 Epoch/Scheduler；
 4. 比较等权专家、软路由和 Top-k 路由；
-5. 增加 HTER/AUC、跨域实验和可复现实验配置。
+5. 在用户确认后冻结正式实验 commit/tag 并启动完整训练。
 

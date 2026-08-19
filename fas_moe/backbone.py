@@ -36,6 +36,7 @@ class ResNet50Layer2(nn.Module):
         pretrained: bool = True,
         weights_path: str | Path | None = None,
         freeze: bool = True,
+        freeze_batch_norm: bool = True,
     ) -> None:
         super().__init__()
         if weights_path is not None:
@@ -55,15 +56,29 @@ class ResNet50Layer2(nn.Module):
             network.layer2,
         )
         self.freeze = bool(freeze)
+        self.freeze_batch_norm = bool(freeze_batch_norm)
         if self.freeze:
             for parameter in self.features.parameters():
                 parameter.requires_grad_(False)
             self.features.eval()
+        elif self.freeze_batch_norm:
+            self._freeze_batch_norm()
+
+    def _freeze_batch_norm(self) -> None:
+        """Keep ImageNet BN statistics/affine parameters fixed while convolutions train."""
+
+        for module in self.features.modules():
+            if isinstance(module, nn.modules.batchnorm._BatchNorm):
+                module.eval()
+                for parameter in module.parameters():
+                    parameter.requires_grad_(False)
 
     def train(self, mode: bool = True) -> "ResNet50Layer2":
         super().train(mode)
         if self.freeze:
             self.features.eval()
+        elif self.freeze_batch_norm:
+            self._freeze_batch_norm()
         return self
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
@@ -73,11 +88,20 @@ class ResNet50Layer2(nn.Module):
 
 
 def build_backbone(
-    *, pretrained: bool = True, weights_path: str | Path | None = None, freeze: bool = True
+    *,
+    pretrained: bool = True,
+    weights_path: str | Path | None = None,
+    freeze: bool = True,
+    freeze_batch_norm: bool = True,
 ) -> ResNet50Layer2:
     """Construct the default shared backbone."""
 
-    return ResNet50Layer2(pretrained=pretrained, weights_path=weights_path, freeze=freeze)
+    return ResNet50Layer2(
+        pretrained=pretrained,
+        weights_path=weights_path,
+        freeze=freeze,
+        freeze_batch_norm=freeze_batch_norm,
+    )
 
 
 __all__ = ["ResNet50Layer2", "build_backbone"]
