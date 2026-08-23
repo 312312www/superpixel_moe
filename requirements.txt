@@ -1,13 +1,7 @@
-# Runtime dependencies for the minimal Superpixel-MoE baseline.
-# Install the hardware-appropriate PyTorch build first; see README.md.
-numpy>=1.26,<2
+# Runtime dependencies for the five-stage FAS training pipeline.
+# Install the hardware-appropriate PyTorch build first.
+numpy>=1.26
 Pillow>=10.0
-scikit-image>=0.25.2,<0.26
-torch>=2.5,<2.9
-torchvision>=0.20,<0.24
-# MediaPipe 0.10.30's Windows wheel currently lacks the exported `free`
-# symbol expected by its Tasks ctypes bridge; 0.10.21 is verified on
-# Python 3.10/Windows and still supports the Face Landmarker task API.
-mediapipe==0.10.21
-matplotlib>=3.7
-protobuf>=4.25.3,<5
+torch>=2.5
+torchvision>=0.20
+scikit-image>=0.25,<0.27

@@ -1,45 +1,23 @@
-# ============================================================
-# Python / packaging
-# ============================================================
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *$py.class
-
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-MANIFEST
-
-# Test, lint, type-check and coverage caches
 .pytest_cache/
-.hypothesis/
 .mypy_cache/
-.pytype/
 .ruff_cache/
+.hypothesis/
 .tox/
 .nox/
 .coverage
 .coverage.*
 htmlcov/
 coverage.xml
-coverage.json
 
-# ============================================================
-# Virtual environments and local configuration
-# ============================================================
+# Packaging and local environments
+build/
+dist/
+*.egg-info/
+.eggs/
 .venv/
 venv/
 env/
@@ -47,11 +25,8 @@ ENV/
 .env
 .env.*
 !.env.example
-*.local
 
-# ============================================================
-# IDE / OS files
-# ============================================================
+# IDE and OS files
 .vscode/
 .idea/
 *.swp
@@ -60,33 +35,34 @@ ENV/
 Thumbs.db
 desktop.ini
 
-# ============================================================
-# Runtime output, caches and experiment artifacts
-# ============================================================
+# Generated experiment outputs, caches and logs
 outputs/
 runs/
 logs/
+checkpoints/
+artifacts/
 wandb/
 mlruns/
 tensorboard/
-checkpoints/
-artifacts/
 *.log
 *.prof
+*.tmp
+*.temp
+*.part
+*.bak
+*.orig
 
-# ============================================================
+# Generated split manifests. They contain machine-specific absolute paths.
+splits/
+
 # Local datasets and generated numerical arrays
-# ============================================================
 data/
 dataset/
 datasets/
 *.npy
 *.npz
 
-# ============================================================
-# Model weights / downloaded binary assets
-# Keep large or externally licensed assets out of the source repository.
-# ============================================================
+# Downloaded / locally licensed model assets
 models/
 *.task
 *.pt
@@ -95,9 +71,7 @@ models/
 *.onnx
 *.safetensors
 
-# ============================================================
 # Archives and local packages
-# ============================================================
 *.whl
 *.zip
 *.7z
@@ -106,19 +80,5 @@ models/
 *.tar.gz
 *.tgz
 
-# ============================================================
-# Temporary files
-# ============================================================
-tmp/
-temp/
-.tmp/
-.tmp_*/
-tmp_*/
-temp_*/
-*.tmp
-*.temp
-*.bak
-*~
-
-# Jupyter
+# Notebook state
 .ipynb_checkpoints/

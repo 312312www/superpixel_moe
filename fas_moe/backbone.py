@@ -1,83 +1,83 @@
-"""Shared spatial backbone for the minimal Superpixel-MoE model."""
+"""Backbone for the FAS pipeline: ResNet-50 (default) or ResNet-34.
+
+The full network (conv1..fc removed) is used and fine-tuned, unlike the old
+design which froze a stem->layer2 slice.  Standard ImageNet normalization is
+applied by the model on [0, 255] uint8/float input.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import torch
 from torch import nn
-from torchvision.models import ResNet50_Weights, resnet50
+from torchvision.models import (
+    ResNet34_Weights,
+    ResNet50_Weights,
+    resnet34,
+    resnet50,
+)
+
+BackboneName = Literal["resnet50", "resnet34"]
+
+_BUILDERS = {
+    "resnet50": (resnet50, ResNet50_Weights.IMAGENET1K_V1),
+    "resnet34": (resnet34, ResNet34_Weights.IMAGENET1K_V1),
+}
+
+# Final conv output channels for each supported backbone.
+OUT_CHANNELS = {"resnet50": 2048, "resnet34": 512}
 
 
-def _cached_resnet50_weights() -> Path | None:
-    """Find a compatible ResNet-50 checkpoint in the torch hub cache."""
-
+def _cached_weights_path(backbone: str) -> Path | None:
+    """Return a compatible torchvision checkpoint from the hub cache if present."""
     cache_dir = Path(torch.hub.get_dir()) / "checkpoints"
-    candidates = sorted(cache_dir.glob("resnet50-*.pth"))
+    patterns = {"resnet50": "resnet50-*.pth", "resnet34": "resnet34-*.pth"}[backbone]
+    candidates = sorted(cache_dir.glob(patterns))
     return candidates[0] if candidates else None
 
 
-def _load_state_dict(network: nn.Module, path: Path) -> None:
-    state = torch.load(path, map_location="cpu", weights_only=True)
-    if isinstance(state, dict) and "state_dict" in state:
-        state = state["state_dict"]
-    state = {str(key).removeprefix("module."): value for key, value in state.items()}
-    network.load_state_dict(state, strict=False)
-
-
-class ResNet50Layer2(nn.Module):
-    """ResNet-50 stem through layer2, returning a 32x32 feature map."""
-
-    output_channels = 512
-
-    def __init__(
-        self,
-        *,
-        pretrained: bool = True,
-        weights_path: str | Path | None = None,
-        freeze: bool = True,
-    ) -> None:
-        super().__init__()
-        if weights_path is not None:
-            network = resnet50(weights=None)
-            _load_state_dict(network, Path(weights_path))
-        elif pretrained and (cached := _cached_resnet50_weights()) is not None:
-            network = resnet50(weights=None)
-            _load_state_dict(network, cached)
-        else:
-            network = resnet50(weights=ResNet50_Weights.DEFAULT if pretrained else None)
-        self.features = nn.Sequential(
-            network.conv1,
-            network.bn1,
-            network.relu,
-            network.maxpool,
-            network.layer1,
-            network.layer2,
-        )
-        self.freeze = bool(freeze)
-        if self.freeze:
-            for parameter in self.features.parameters():
-                parameter.requires_grad_(False)
-            self.features.eval()
-
-    def train(self, mode: bool = True) -> "ResNet50Layer2":
-        super().train(mode)
-        if self.freeze:
-            self.features.eval()
-        return self
-
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        if images.ndim != 4 or images.shape[1] != 3:
-            raise ValueError(f"expected BCHW RGB input, got {tuple(images.shape)}")
-        return self.features(images)
-
-
 def build_backbone(
-    *, pretrained: bool = True, weights_path: str | Path | None = None, freeze: bool = True
-) -> ResNet50Layer2:
-    """Construct the default shared backbone."""
+    name: BackboneName = "resnet50",
+    *,
+    pretrained: bool = True,
+    weights_path: str | Path | None = None,
+    dropout: float = 0.0,
+) -> nn.Module:
+    """Build the convolutional trunk without the ImageNet classifier head."""
+    if name not in _BUILDERS:
+        raise ValueError(f"unsupported backbone {name!r}; choose from {sorted(_BUILDERS)}")
+    builder, default_weights = _BUILDERS[name]
+    if pretrained:
+        if weights_path is not None:
+            state = torch.load(weights_path, map_location="cpu", weights_only=True)
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            state = {str(k).removeprefix("module."): v for k, v in state.items()}
+            network = builder(weights=None)
+            missing, unexpected = network.load_state_dict(state, strict=False)
+            if missing:
+                raise RuntimeError(f"backbone weights missing keys: {sorted(missing)[:5]}")
+            if unexpected:
+                raise RuntimeError(f"backbone weights unexpected keys: {sorted(unexpected)[:5]}")
+        else:
+            network = builder(weights=default_weights)
+    else:
+        network = builder(weights=None)
+    trunk = nn.Sequential(
+        network.conv1,
+        network.bn1,
+        network.relu,
+        network.maxpool,
+        network.layer1,
+        network.layer2,
+        network.layer3,
+        network.layer4,
+    )
+    if dropout > 0.0:
+        trunk.add_module("dropout", nn.Dropout2d(dropout))
+    return trunk
 
-    return ResNet50Layer2(pretrained=pretrained, weights_path=weights_path, freeze=freeze)
 
-
-__all__ = ["ResNet50Layer2", "build_backbone"]
+__all__ = ["OUT_CHANNELS", "BackboneName", "build_backbone"]

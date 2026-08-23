@@ -1,49 +1,50 @@
-"""Minimal Superpixel-MoE baseline for face anti-spoofing."""
+"""FAS stages A--E: backbone, Native MoE and multi-scale superpixel variants."""
 
-from .features import FEATURE_NAMES, extract_region_features
+from .backbone import OUT_CHANNELS, build_backbone
 from .checkpoint import checkpoint_state, load_checkpoint, validate_checkpoint
-from .face_parts import (
-    NUM_FACE_PARTS,
-    PART_NAMES,
-    landmarks_to_part_masks,
-    part_distribution_for_labels,
-    unknown_part_distributions,
+from .data import (
+    DATASET_CODES,
+    DATASETS,
+    SPECS,
+    DatasetSpec,
+    FASDataset,
+    available_datasets,
+    dataset_available,
+    dataset_records,
+    generate_manifests,
+    load_manifest,
+    manifest_sha256,
+    subject_split,
 )
-from .io import infer_image_range, load_input, prepare_image, restore_image_range
-from .landmarks import FaceLandmarkResult, detect_face_landmarks
-from .model import EqualWeightMoE, SuperpixelMoE, SuperpixelMoEConfig, pool_regions
-from .segmentation import (
-    DEFAULT_LEVELS,
-    SuperpixelConfig,
-    SuperpixelViews,
-    SLIC_CACHE_SCHEMA,
-    segment_views,
+from .metrics import (
+    equal_error_rate,
+    error_rates,
+    evaluate_scores,
+    roc_auc,
+    select_macro_hter_threshold,
+    threshold_candidates,
 )
+from .model import (
+    FASModel,
+    FASModelConfig,
+    MixStyle,
+    NaiveMoE,
+    NativeMoE,
+    PHASES,
+    gradient_reverse,
+    pool_superpixel_regions,
+    total_parameters,
+    trainable_parameters,
+)
+from .superpixels import DEFAULT_LEVELS, SUPERPIXEL_SCHEMA, SuperpixelConfig, cached_superpixels, segment_image
 
 __all__ = [
-    "DEFAULT_LEVELS",
-    "FEATURE_NAMES",
-    "NUM_FACE_PARTS",
-    "PART_NAMES",
-    "EqualWeightMoE",
-    "checkpoint_state",
-    "SuperpixelConfig",
-    "SuperpixelMoE",
-    "SuperpixelMoEConfig",
-    "SuperpixelViews",
-    "SLIC_CACHE_SCHEMA",
-    "extract_region_features",
-    "FaceLandmarkResult",
-    "detect_face_landmarks",
-    "landmarks_to_part_masks",
-    "load_input",
-    "infer_image_range",
-    "load_checkpoint",
-    "pool_regions",
-    "prepare_image",
-    "restore_image_range",
-    "part_distribution_for_labels",
-    "segment_views",
-    "unknown_part_distributions",
-    "validate_checkpoint",
+    "DATASET_CODES", "DATASETS", "DatasetSpec", "OUT_CHANNELS", "SPECS", "FASDataset",
+    "FASModel", "FASModelConfig", "MixStyle", "NaiveMoE", "NativeMoE", "PHASES", "SuperpixelConfig",
+    "DEFAULT_LEVELS", "SUPERPIXEL_SCHEMA", "available_datasets", "build_backbone", "cached_superpixels",
+    "checkpoint_state", "dataset_available", "dataset_records", "equal_error_rate", "error_rates",
+    "evaluate_scores", "generate_manifests", "gradient_reverse", "load_checkpoint", "load_manifest",
+    "manifest_sha256", "pool_superpixel_regions", "roc_auc", "segment_image",
+    "select_macro_hter_threshold", "subject_split", "threshold_candidates", "total_parameters",
+    "trainable_parameters", "validate_checkpoint",
 ]
